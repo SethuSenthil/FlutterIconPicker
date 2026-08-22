@@ -2,7 +2,6 @@ import 'dart:io';
 import 'dart:isolate';
 
 import 'package:args/args.dart';
-import 'package:dcli/dcli.dart';
 import 'package:flutter_iconpicker/Models/icon_pack.dart';
 import 'package:flutter_iconpicker/extensions/string_extensions.dart';
 import 'package:path/path.dart' as path;
@@ -83,12 +82,25 @@ Future<void> main(List<String> arguments) async {
 
 void emptyIconPacks({
   required String packagePath,
-}) =>
-    copyTree(
-      '$packagePath/assets/empty_packs',
-      '$packagePath/lib/IconPicker/Packs',
-      overwrite: true,
-    );
+}) {
+  final sourceDir = Directory(path.join(packagePath, 'assets', 'empty_packs'));
+  final targetDir =
+      Directory(path.join(packagePath, 'lib', 'IconPicker', 'Packs'));
+
+  if (!targetDir.existsSync()) {
+    targetDir.createSync(recursive: true);
+  }
+
+  if (sourceDir.existsSync()) {
+    for (final entity in sourceDir.listSync()) {
+      if (entity is File) {
+        final destinationPath =
+            path.join(targetDir.path, path.basename(entity.path));
+        entity.copySync(destinationPath);
+      }
+    }
+  }
+}
 
 void generateIconPack({
   required String packagePath,
@@ -97,11 +109,25 @@ void generateIconPack({
   assert(pack.path.isNotNullOrBlank,
       'Path must be specified if you want to generate ${pack.name} IconPack');
 
-  copy(
-    '$packagePath/assets/generated_packs/${pack.path}.dart',
-    '$packagePath/lib/IconPicker/Packs/${pack.path}.dart',
-    overwrite: true,
+  final sourcePath = path.join(
+    packagePath,
+    'assets',
+    'generated_packs',
+    '${pack.path}.dart',
   );
+  final destinationPath = path.join(
+    packagePath,
+    'lib',
+    'IconPicker',
+    'Packs',
+    '${pack.path}.dart',
+  );
+
+  final sourceFile = File(sourcePath);
+  final destinationFile = File(destinationPath);
+
+  destinationFile.parent.createSync(recursive: true);
+  sourceFile.copySync(destinationFile.path);
 
   print('📦 Generated ${pack.name} IconPack');
 }
